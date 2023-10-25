@@ -1,8 +1,0 @@
-langchain
-datasets
-huggingface_hub
-pandas
-numpy
-pydozer
-sentence_transformers
-openai

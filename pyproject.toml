@@ -16,6 +16,10 @@ datasets = "^2.14.5"
 huggingface-hub = "^0.18.0"
 sentence-transformers = "^2.2.2"
 openai = "^0.28.1"
+pinecone-client = "^2.2.4"
+chainlit = "^0.7.301"
+tiktoken = "^0.5.1"
+farm-haystack = "^1.21.2"
 
 [build-system]
 requires = ["poetry-core"]

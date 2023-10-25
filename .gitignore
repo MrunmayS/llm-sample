@@ -1,3 +1,6 @@
 .dozer
 .env
 .python-version
+.chainlit
+__pycache__
+test.py
