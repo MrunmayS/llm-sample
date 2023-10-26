@@ -37,7 +37,6 @@ embed = OpenAIEmbeddings(
 )
 
 # find ENV (cloud region) next to API key in console
-YOUR_ENV = "us-west1-gcp-free"
 index_name = 'langchain-retrieval-agent'
 pinecone.init(
     api_key=PINECONE_API_KEY,
@@ -99,6 +98,8 @@ tools = [
         func=chain.run,
         description=(
             "Useful when you need general information about bank policies and bank offerings. "
+            'use this tool when answering general knowledge queries to get '
+            'more information about the topic'
         )
     )
 ]
@@ -109,7 +110,7 @@ agent = initialize_agent(
     tools=tools,
     llm=llm,
     verbose=True,
-    max_iterations=3,
+    max_iterations=5,
     early_stopping_method='generate',
     memory=conversational_memory
 )
