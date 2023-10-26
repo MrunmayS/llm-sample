@@ -1,5 +1,4 @@
 import chainlit as cl
-from dozer import getCredit,getCustomerData
 import os
 from langchain.prompts import  PromptTemplate
 from langchain.chains import LLMChain
@@ -21,6 +20,38 @@ from langchain.chains import RetrievalQAWithSourcesChain
 from langchain.prompts.chat import ChatPromptTemplate,HumanMessagePromptTemplate,SystemMessagePromptTemplate
 from chainlit import user_session
 import os
+from pydozer.api import ApiClient
+
+
+
+### Dozer
+
+DOZER_CLOUD_HOST = "data.getdozer.io:443"
+
+def get_api_client(app_id=None, token=None):
+    return ApiClient("financial_profile", url=DOZER_CLOUD_HOST, app_id=app_id,
+                     secure=True, token=token) if app_id else ApiClient("financial_profile", url="localhost:80")
+
+
+customer_client = get_api_client(app_id=os.environ.get("DOZER_APP_ID"), token=os.environ.get("DOZER_TOKEN"))
+
+def getCustomerData(input):
+    data = customer_client.query({"$filter": {"id":input}})
+    rec = data.records[0].record
+    id = rec.values[0].int_value
+    name = rec.values[1].string_value
+    income = rec.values[2].int_value
+    age = rec.values[3].int_value
+    dependents = rec.values[4].int_value
+    address = rec.values[5].string_value
+    prob = rec.values[6].float_value
+    credit_amt = rec.values[7].int_value
+    repay_status = rec.values[8].float_value
+    util_ratio = rec.values[9].float_value
+
+    
+    return [id,name,income,age,dependents,credit_amt,repay_status,util_ratio,address, prob]
+
 
 
 #user_env = user_session.get(".env")
@@ -78,18 +109,21 @@ def setName(userName):
     global name
     name = userName
 
-def customerProfile(input = ""):
-    data = getCustomerData(input=name)
-    name1 = data[0]
-    income = data[1]
-    age= data[2]
-    dependents= data[3]
-    credit_amt= data[4]
-    repay_status= data[5]
-    util_ratio= data[6]
-    address= data[7]
+def customerProfile(_):
+    data = getCustomerData(_)
+    id  = data[0]
+    name1 = data[1]
+    income = data[2]
+    age= data[3]
+    dependents= data[4]
+    address= data[5]
+    prob = data[6]
+    credit_amt= data[7]
+    repay_status= data[8]
+    util_ratio= data[9]
 
-    return ("Age = {age}, income = {income}, dependents = {dependents},repay_status={repay_status}, credit utilisation ratio ={util_ratio} ,address={address}",age,income,dependents,repay_status,util_ratio,address)
+
+    return ( "Name = {name1} ,age = {age}, income = {income}, dependents = {dependents},repay_status={repay_status}, credit utilisation ratio ={util_ratio} ,address={address}, available credit={credit_amt}, probability of default = {prob} ",name1, age,income,dependents,repay_status,util_ratio,address,credit_amt, prob)
 
     
 tools = [
@@ -130,6 +164,9 @@ async def start():
     setName(res['content'])
     # global credit 
     # credit = getCredit(int(res['content']))
+    print(res)
+    x = customerProfile(int(res['content']) )
+    print(x)
     cl.user_session.set("chain", chain)
 
 
@@ -149,6 +186,7 @@ def factory():
 
 @cl.on_message
 async def main(message: str):
+
     response = await cl.make_async(agent.run)(message.content)
 
     await cl.Message(

@@ -1,4 +1,4 @@
-app_name: onnx-sample-lstm
+app_name: llm-sample
 version: 1
 connections:
   - name: onnx
@@ -41,8 +41,11 @@ sql: |
   res1 AS (  SELECT torch_jit( LIMIT_BAL, SEX, EDUCATION, MARRIAGE, AGE, PAY_AMT6,BILL_AMT6,PAY_6,PAY_AMT5,BILL_AMT5,PAY_5,PAY_AMT4,BILL_AMT4,PAY_4,
                  PAY_AMT3,BILL_AMT3,PAY_3,
                  PAY_AMT2,BILL_AMT2,PAY_2,
-                 PAY_AMT1,BILL_AMT1,PAY_0) as result, ID as id , LIMIT_BAL  from credit )
-  SELECT ID, name, total_income, age, dependents, address, result, LIMIT_BAL as avail_credit
+                 PAY_AMT1,BILL_AMT1,PAY_0) as result, ID as id , LIMIT_BAL, 
+                 (PAY_0 + PAY_2 + PAY_3 + PAY_4 + PAY_5 + PAY_6)/5 as avg_repayment_status,
+                 (BILL_AMT1+BILL_AMT2+BILL_AMT3+BILL_AMT4+BILL_AMT5+BILL_AMT6)/(LIMIT_BAL * 6) as utilization_ratio
+                 from credit )
+  SELECT ID as id, name, total_income, age, dependents, address, result, LIMIT_BAL as avail_credit, avg_repayment_status, utilization_ratio
   INTO customer_profile
   FROM template t
   JOIN res1 r
