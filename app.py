@@ -21,7 +21,7 @@ from langchain.prompts.chat import ChatPromptTemplate,HumanMessagePromptTemplate
 from chainlit import user_session
 import os
 from pydozer.api import ApiClient
-
+from langchain.agents import ConversationalChatAgent, AgentExecutor
 
 
 ### Dozer
@@ -109,8 +109,8 @@ def setName(userName):
     global name
     name = userName
 
-def customerProfile(_):
-    data = getCustomerData(_)
+def customerProfile(input):
+    data = getCustomerData(int(input))
     id  = data[0]
     name1 = data[1]
     income = data[2]
@@ -123,7 +123,7 @@ def customerProfile(_):
     util_ratio= data[9]
 
 
-    return ( "Name = {name1} ,age = {age}, income = {income}, dependents = {dependents},repay_status={repay_status}, credit utilisation ratio ={util_ratio} ,address={address}, available credit={credit_amt}, probability of default = {prob} ",name1, age,income,dependents,repay_status,util_ratio,address,credit_amt, prob)
+    return ( f"ID = {id} ,name = {name1} ,age = {age}, income = {income}, dependents = {dependents},repay_status={repay_status}, credit utilisation ratio ={util_ratio} ,address={address}, available credit={credit_amt}, probability of default = {prob} ")
 
     
 tools = [
@@ -131,9 +131,16 @@ tools = [
         name='Knowledge Base',
         func=chain.run,
         description=(
-            "Useful when you need general information about bank policies and bank offerings. "
-            'use this tool when answering general knowledge queries to get '
+            "Useful when you need general information about bank policies and bank offerings. "\
+            'use this tool when answering general knowledge queries to get '\
             'more information about the topic'
+        )
+    ),
+    Tool(
+        name = 'Customer Data',
+        func = customerProfile,
+        description=(
+            "Useful when you need customer data to decide eligibility for a particular credit card. "
         )
     )
 ]
@@ -154,20 +161,44 @@ global res
 @cl.on_chat_start
 
 async def start():
-    intro = "Hi there, I am an assistant for Bank A. I am here to assist you with all your banking needs! Please enter your name:  "
+    intro = "Hi there, I am an assistant for Bank A. I am here to assist you with all your banking needs! Please enter your id:  "
     
     res = await cl.AskUserMessage(content=intro,timeout=45,raise_on_timeout=True).send()
     
-
+    id = int(res['content'])
     greeting = f"Hi {res['content']}. What brings you here?"
     await cl.Message(content=greeting).send()
     setName(res['content'])
     # global credit 
     # credit = getCredit(int(res['content']))
-    print(res)
-    x = customerProfile(int(res['content']) )
-    print(x)
-    cl.user_session.set("chain", chain)
+    global customerinfo
+    customerinfo = customerProfile(int(res['content']) )
+    print(customerinfo)
+    
+    agent = ConversationalChatAgent.from_llm_and_tools(
+        llm=llm,
+        tools=tools,
+        system_message = f"You have customer info of a customer which is as follows {customerinfo}. You have to use this information along with Knowledge base to decide if the customer is eligible for a credit card or not.",
+        verbose=True,
+        max_iterations=5,
+        early_stopping_method='generate',
+        memory=conversational_memory
+
+    )
+
+    global agent_chain
+    agent_chain = AgentExecutor.from_agent_and_tools(
+        agent = agent,
+        tools = tools, 
+        verbose = True,
+        max_iterations = 5,
+        early_stopping_method = 'generate',
+        memory = conversational_memory
+
+    )
+    cl.user_session.set("chain", agent_chain)
+
+
 
 
 '''@cl.langchain_factory(use_async = False)
@@ -186,8 +217,8 @@ def factory():
 
 @cl.on_message
 async def main(message: str):
-
-    response = await cl.make_async(agent.run)(message.content)
+    agent_chain = cl.user_session.get("chain") 
+    response = await cl.make_async(agent_chain.run)(message.content)
 
     await cl.Message(
         content=response,
