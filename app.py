@@ -89,7 +89,7 @@ vectorstore = Pinecone(
 
 llm = ChatOpenAI(
     openai_api_key = OPEN_API_KEY,
-    model_name='gpt-3.5-turbo',
+    model_name='gpt-4',
     temperature=0.0
 )
 
@@ -141,6 +141,7 @@ tools = [
         func = customerProfile,
         description=(
             "Useful when you need customer data to decide eligibility for a particular credit card. "
+            "Use to check the probability of default and available balance to use it for eligibility"
         )
     )
 ]
@@ -198,21 +199,6 @@ async def start():
     )
     cl.user_session.set("chain", agent_chain)
 
-
-
-
-'''@cl.langchain_factory(use_async = False)
-def factory():
-    cl.user_session.set("chain", qa)
-    
-    str1 = f" The total credit for the user is {credit}. "
-    
-
-    template = "You are an intelligent chatbot. You are a banking assistant. You will help the user with finance related questions and along with schemes credit card schemes" + str1 + "{question}"
-    prompt = PromptTemplate(template=template, input_variables=["question"])
-    
-    llm_chain = LLMChain(prompt=prompt, llm=llm, verbose=True)
-    return llm_chain'''
 
 
 @cl.on_message
